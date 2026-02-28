@@ -11,12 +11,12 @@ return new class extends Migration {
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->text('description')->nullable();
+            $table->string('image')->nullable();
 
-            // الحقول الجديدة التي طلبتها
             $table->enum('style', ['mini', 'midi', 'maxi'])->nullable();
             $table->boolean('is_best_seller')->default(false);
             $table->boolean('is_trending_now')->default(false);
-            $table->boolean('is_new_arrival')->default(true); // خليناها true افتراضيا عشان أي منتج جديد ينزل في القسم ده فورا
+            $table->boolean('is_new_arrival')->default(true);
 
             $table->boolean('is_active')->default(true);
             $table->timestamps();
