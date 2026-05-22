@@ -33,6 +33,11 @@ class Product extends Model
         'is_trending'    => 'boolean',
     ];
 
+    public function reels()
+    {
+        return $this->hasMany(Reel::class);
+    }
+
     // ─── Accessors ────────────────────────────────────────────────────
 
     public function getImageAttribute(): ?string
