@@ -3,11 +3,34 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReelController;
+use App\Http\Controllers\Api\CategoryController;
 
 
 
-// this route gives us all abilities to manage everything in our products     #Abdalazeem
-Route::apiResource('products', ProductController::class);
+// ── Categories ────────────────────────────────────────────────
+Route::prefix('categories')->group(function () {
+    Route::get('/',        [CategoryController::class, 'index']);
+    Route::get('/{id}',    [CategoryController::class, 'show']);
+    Route::post('/',       [CategoryController::class, 'store']);
+    Route::patch('/{id}',  [CategoryController::class, 'update']);
+    Route::delete('/{id}', [CategoryController::class, 'destroy']);
+});
 
-// this route give us all abilities to manage everything in our Reels and their products     #Abdalazeem
-Route::apiResource('reels', ReelController::class);
+// ── Products ──────────────────────────────────────────────────
+Route::prefix('products')->group(function () {
+    Route::get('/',        [ProductController::class, 'index']);
+    Route::get('/{id}',    [ProductController::class, 'show']);
+    Route::post('/',       [ProductController::class, 'store']);
+    Route::patch('/{id}',  [ProductController::class, 'update']);
+    Route::delete('/{id}', [ProductController::class, 'destroy']);
+});
+
+// ── Reels ─────────────────────────────────────────────────────
+Route::prefix('reels')->name('reels.')->group(function () {
+    Route::get('/',          [ReelController::class, 'index'])->name('index');
+    Route::get('/{reel}',    [ReelController::class, 'show'])->name('show');
+    Route::post('/',         [ReelController::class, 'store'])->name('store');
+    Route::post('/{reel}',   [ReelController::class, 'update'])->name('update');
+    Route::patch('/{reel}',  [ReelController::class, 'update'])->name('update-patch');
+    Route::delete('/{reel}', [ReelController::class, 'destroy'])->name('destroy');
+});

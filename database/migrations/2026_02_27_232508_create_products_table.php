@@ -9,25 +9,39 @@ return new class extends Migration {
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
+
             $table->string('name_ar');
             $table->string('name_en');
+
             $table->text('description_ar')->nullable();
             $table->text('description_en')->nullable();
 
-            $table->decimal('price', 10, 2)->default(0);
+            $table->decimal('price', 10, 2)->index();
             $table->decimal('original_price', 10, 2)->nullable();
 
-            $table->json('images')->nullable();
+            $table->unsignedBigInteger('category_id');
 
-            $table->string('category');
+            $table->foreign('category_id')
+                ->references('id')
+                ->on('categories')
+                ->cascadeOnDelete();
+
 
             $table->boolean('is_best_seller')->default(false);
             $table->boolean('is_new_arrival')->default(true);
             $table->boolean('is_trending')->default(false);
 
             $table->timestamps();
+
+            // optional but very useful:
+            $table->index('category_id');
+            $table->index('is_trending');
+            $table->index('is_new_arrival');
+            $table->index('is_best_seller');
         });
     }
+
+
 
     public function down(): void
     {

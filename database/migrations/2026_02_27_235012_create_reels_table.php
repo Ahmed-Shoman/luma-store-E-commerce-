@@ -16,9 +16,12 @@ return new class extends Migration
             $table->foreignId('product_id')
                 ->nullable()
                 ->constrained()
-                ->nullOnDelete();
+                ->nullOnDelete()
+                ->index();
 
             $table->timestamps();
+
+            $table->index(['product_id', 'created_at']);
         });
     }
 

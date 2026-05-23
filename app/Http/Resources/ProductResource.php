@@ -9,40 +9,40 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $isList = $request->routeIs('products.index');
+
         return [
-            'id'                  => $this->id,
+            'id' => $this->id,
 
-            // Names
-            'name'                => $this->name_ar,
-            'nameEn'              => $this->name_en,
+            'name' => $this->name_ar,
+            'nameEn' => $this->name_en,
 
-            // Descriptions
-            'description'         => $this->description_ar,
-            'descriptionEn'       => $this->description_en,
+            'price' => (float) $this->price,
+            'originalPrice' => $this->original_price ? (float) $this->original_price : null,
 
-            // Pricing
-            'price'               => (float) $this->price,
-            'originalPrice'       => $this->original_price ? (float) $this->original_price : null,
+            // ⚡ IMPORTANT: only send ONE image in list view
+            'image' => $isList
+                ? optional($this->images->first())->url
+                : null,
 
-            // Images
-            'image'               => $this->image,          // accessor → first image
-            'images'              => $this->images ?? [],
+            // ⚡ ONLY send full images in detail page
+            'images' => !$isList
+                ? $this->images->map(fn($img) => $img->url)
+                : null,
 
-            // Category
-            'category'            => $this->category,
+            'category' => $this->whenLoaded('category', function () {
+                return [
+                    'id' => $this->category->id,
+                    'name' => $this->category->name_en,
+                    'nameAr' => $this->category->name_ar,
+                ];
+            }),
 
-            // Flags
-            'isNew'               => $this->is_new_arrival,
-            'isBestSeller'        => $this->is_best_seller,
-            'isTrending'          => $this->is_trending,
+            'isNew' => $this->is_new_arrival,
+            'isBestSeller' => $this->is_best_seller,
+            'isTrending' => $this->is_trending,
 
-            // Computed (bonus)
-            'isOnSale'            => $this->is_on_sale,
-            'discountPercentage'  => $this->discount_percentage,
-
-            // Timestamps
-            'createdAt'           => $this->created_at->toDateTimeString(),
-            'updatedAt'           => $this->updated_at->toDateTimeString(),
+            'createdAt' => $this->created_at?->toDateTimeString(),
         ];
     }
 }

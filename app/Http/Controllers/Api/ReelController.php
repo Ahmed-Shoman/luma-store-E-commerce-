@@ -3,77 +3,142 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ReelResource;
 use App\Models\Reel;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class ReelController extends Controller
 {
-    public function index()
+    private const TTL       = 3600;       // 1 hour — reels change infrequently
+    private const CACHE_TAG = 'reels';
+
+    /**
+     * GET /api/reels
+     */
+    public function index(Request $request): JsonResponse
     {
-        return Reel::with('product')->latest()->get();
+        $perPage  = min((int) $request->input('per_page', 12), 24);
+        $cacheKey = 'reels_' . md5(json_encode($request->only(['page', 'per_page', 'product_id'])));
+
+        $reels = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::TTL, function () use ($request, $perPage) {
+            $query = Reel::query()
+                ->select(['id', 'video', 'product_id', 'created_at'])
+                ->with([
+                    'product:id,name_en,name_ar',
+                    'product.images:id,product_id,url,position',
+                ])
+                ->latest();
+
+            // Optional filter by product
+            if ($request->filled('product_id')) {
+                $query->where('product_id', $request->integer('product_id'));
+            }
+
+            return $query->paginate($perPage);
+        });
+
+        return response()->json([
+            'success' => true,
+            'data'    => ReelResource::collection($reels)->response()->getData(true),
+        ]);
     }
 
-    public function store(Request $request)
+    /**
+     * GET /api/reels/{reel}
+     */
+    public function show(Reel $reel): JsonResponse
     {
-        $request->validate([
-            'video' => 'required|file|mimes:mp4,mov,webm',
+        $cacheKey = "reel_{$reel->id}";
+
+        $reel = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::TTL, function () use ($reel) {
+            return $reel->load([
+                'product:id,name_en,name_ar',
+                'product.images:id,product_id,url,position',
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'data'    => new ReelResource($reel),
+        ]);
+    }
+
+    /**
+     * POST /api/reels
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'video'      => 'required|file|mimes:mp4,mov,webm|max:102400', // 100 MB
             'product_id' => 'required|exists:products,id',
         ]);
 
-        $video = $request->file('video')->store('reels', 'public');
+        $path = $request->file('video')->store('reels', 'public');
 
         $reel = Reel::create([
-            'video' => $video,
-            'product_id' => $request->product_id,
+            'video'      => $path,
+            'product_id' => $validated['product_id'],
         ]);
 
-        return response()->json(
-            $reel->load('product'),
-            201
-        );
+        Cache::tags([self::CACHE_TAG])->flush();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reel uploaded successfully.',
+            'data'    => new ReelResource($reel->load([
+                'product:id,name_en,name_ar',
+                'product.images:id,product_id,url,position',
+            ])),
+        ], 201);
     }
 
-    public function show(Reel $reel)
+    /**
+     * POST /api/reels/{reel}   (use POST + _method=PATCH for multipart)
+     * PATCH /api/reels/{reel}
+     */
+    public function update(Request $request, Reel $reel): JsonResponse
     {
-        return $reel->load('product');
-    }
-
-    public function update(Request $request, Reel $reel)
-    {
-        $request->validate([
-            'video' => 'nullable|file|mimes:mp4,mov,webm',
+        $validated = $request->validate([
+            'video'      => 'nullable|file|mimes:mp4,mov,webm|max:102400',
             'product_id' => 'nullable|exists:products,id',
         ]);
 
         if ($request->hasFile('video')) {
-
-            if ($reel->video) {
-                Storage::disk('public')->delete($reel->video);
-            }
-
-            $reel->video = $request
-                ->file('video')
-                ->store('reels', 'public');
+            // Delete old file before storing new one
+            Storage::disk('public')->delete($reel->video);
+            $validated['video'] = $request->file('video')->store('reels', 'public');
         }
 
-        $reel->product_id = $request->product_id;
+        $reel->update(array_filter($validated, fn($v) => ! is_null($v)));
 
-        $reel->save();
+        Cache::tags([self::CACHE_TAG])->flush();
 
-        return $reel->load('product');
+        return response()->json([
+            'success' => true,
+            'data'    => new ReelResource($reel->fresh()->load([
+                'product:id,name_en,name_ar',
+                'product.images:id,product_id,url,position',
+            ])),
+        ]);
     }
 
-    public function destroy(Reel $reel)
+    /**
+     * DELETE /api/reels/{reel}
+     */
+    public function destroy(Reel $reel): JsonResponse
     {
-        if ($reel->video) {
-            Storage::disk('public')->delete($reel->video);
-        }
+        Storage::disk('public')->delete($reel->video);
 
         $reel->delete();
 
+        Cache::tags([self::CACHE_TAG])->flush();
+
         return response()->json([
-            'message' => 'Reel deleted successfully',
+            'success' => true,
+            'message' => 'Reel deleted successfully.',
         ]);
     }
 }

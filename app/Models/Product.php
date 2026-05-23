@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+
+use App\Models\Category;
+use App\Models\ProductImage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
@@ -17,64 +19,46 @@ class Product extends Model
         'description_en',
         'price',
         'original_price',
-        'images',
-        'category',
+        'category_id',
         'is_best_seller',
         'is_new_arrival',
         'is_trending',
     ];
 
     protected $casts = [
-        'price'          => 'decimal:2',
+        'price' => 'decimal:2',
         'original_price' => 'decimal:2',
-        'images'         => 'array',
         'is_best_seller' => 'boolean',
         'is_new_arrival' => 'boolean',
-        'is_trending'    => 'boolean',
+        'is_trending' => 'boolean',
     ];
+
+    /*
+    |-----------------------------------
+    | RELATIONS (PERFORMANCE FRIENDLY)
+    |-----------------------------------
+    */
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('position');
+    }
 
     public function reels()
     {
         return $this->hasMany(Reel::class);
     }
 
-    // ─── Accessors ────────────────────────────────────────────────────
-
-    public function getImageAttribute(): ?string
-    {
-        return $this->images[0] ?? null;
-    }
-
-    public function getDiscountPercentageAttribute(): ?int
-    {
-        if ($this->original_price && $this->original_price > $this->price) {
-            return (int) round((1 - $this->price / $this->original_price) * 100);
-        }
-        return null;
-    }
-
-    public function getIsOnSaleAttribute(): bool
-    {
-        return !is_null($this->original_price) && $this->original_price > $this->price;
-    }
-
-    // ─── Image Helpers ────────────────────────────────────────────────
-
-    /**
-     * Delete all stored image files for this product.
-     * Called before delete or when replacing images.
-     */
-    public function deleteImages(): void
-    {
-        foreach ($this->images ?? [] as $url) {
-            $path = str_replace(Storage::disk('public')->url(''), '', $url);
-            if (Storage::disk('public')->exists($path)) {
-                Storage::disk('public')->delete($path);
-            }
-        }
-    }
-
-    // ─── Scopes ───────────────────────────────────────────────────────
+    /*
+    |-----------------------------------
+    | SCOPES (FAST FILTERING)
+    |-----------------------------------
+    */
 
     public function scopeBestSellers($query)
     {
@@ -91,14 +75,48 @@ class Product extends Model
         return $query->where('is_trending', true);
     }
 
-    public function scopeByCategory($query, string $category)
+    public function scopeByCategory($query, int $categoryId)
     {
-        return $query->where('category', $category);
+        return $query->where('category_id', $categoryId);
     }
 
     public function scopeOnSale($query)
     {
         return $query->whereNotNull('original_price')
             ->whereColumn('price', '<', 'original_price');
+    }
+
+    /*
+    |-----------------------------------
+    | ACCESSORS (LIGHTWEIGHT ONLY)
+    |-----------------------------------
+    */
+
+    public function getDiscountPercentageAttribute(): ?int
+    {
+        if ($this->original_price && $this->original_price > $this->price) {
+            return (int) round((1 - $this->price / $this->original_price) * 100);
+        }
+
+        return null;
+    }
+
+    public function getIsOnSaleAttribute(): bool
+    {
+        return $this->original_price && $this->original_price > $this->price;
+    }
+
+    /*
+    |-----------------------------------
+    | PERFORMANCE HELPERS
+    |-----------------------------------
+    */
+
+    // FAST: used in product list only
+    public function getMainImageAttribute(): ?string
+    {
+        return $this->relationLoaded('images')
+            ? ($this->images->first()->url ?? null)
+            : null;
     }
 }
