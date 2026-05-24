@@ -23,7 +23,7 @@ class ReelController extends Controller
         $perPage  = min((int) $request->input('per_page', 12), 24);
         $cacheKey = 'reels_' . md5(json_encode($request->only(['page', 'per_page', 'product_id'])));
 
-        $reels = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::TTL, function () use ($request, $perPage) {
+        $reels = Cache::remember($cacheKey, self::TTL, function () use ($request, $perPage) {
             $query = Reel::query()
                 ->select(['id', 'video', 'product_id', 'created_at'])
                 ->with([
@@ -53,11 +53,13 @@ class ReelController extends Controller
     {
         $cacheKey = "reel_{$reel->id}";
 
-        $reel = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::TTL, function () use ($reel) {
-            return $reel->load([
+        $reelId = $reel->id;
+
+        $reel = Cache::remember($cacheKey, self::TTL, function () use ($reelId) {
+            return Reel::with([
                 'product:id,name_en,name_ar',
                 'product.images:id,product_id,url,position',
-            ]);
+            ])->findOrFail($reelId);
         });
 
         return response()->json([
@@ -83,7 +85,7 @@ class ReelController extends Controller
             'product_id' => $validated['product_id'],
         ]);
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -114,7 +116,7 @@ class ReelController extends Controller
 
         $reel->update(array_filter($validated, fn($v) => ! is_null($v)));
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -134,7 +136,7 @@ class ReelController extends Controller
 
         $reel->delete();
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,

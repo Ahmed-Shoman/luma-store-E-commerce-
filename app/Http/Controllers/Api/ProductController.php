@@ -22,7 +22,7 @@ class ProductController extends Controller
     {
         $cacheKey = 'products_' . md5(json_encode($request->all()));
 
-        $products = Cache::tags(['products'])->remember($cacheKey, 60, function () use ($request) {
+        $products = Cache::remember($cacheKey, 60, function () use ($request) {
 
             $query = Product::query()
                 ->select([
@@ -134,7 +134,7 @@ class ProductController extends Controller
 
         $product = Product::create($validated);
 
-        Cache::tags(['products'])->flush();
+        // Cache::tags(['products'])->flush();
 
         // store images (separate table recommended)
         foreach ($request->file('images', []) as $file) {
@@ -222,7 +222,7 @@ class ProductController extends Controller
             }
         }
 
-        Cache::tags(['products'])->flush();
+        // Cache::tags(['products'])->flush();
 
         return response()->json([
             'success' => true,
@@ -248,7 +248,7 @@ class ProductController extends Controller
         $product->reels()->delete();
         $product->delete();
 
-        Cache::tags(['products'])->flush();
+        // Cache::tags(['products'])->flush();
 
         return response()->json([
             'success' => true,

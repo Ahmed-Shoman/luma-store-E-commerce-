@@ -26,7 +26,7 @@ class CategoryController extends Controller
         $withCount = $request->boolean('with_count', false);
         $cacheKey  = 'categories_all_' . ($withCount ? 'count' : 'plain');
 
-        $categories = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::TTL, function () use ($withCount) {
+        $categories = Cache::remember($cacheKey, self::TTL, function () use ($withCount) {
             $query = Category::query()
                 ->select(['id', 'name_en', 'name_ar', 'created_at'])
                 ->orderBy('name_en');
@@ -53,12 +53,12 @@ class CategoryController extends Controller
         $withProducts = $request->boolean('with_products', false);
         $cacheKey     = "category_{$id}_" . ($withProducts ? 'products' : 'plain');
 
-        $category = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::TTL, function () use ($id, $withProducts) {
+        $category = Cache::remember($cacheKey, self::TTL, function () use ($id, $withProducts) {
             $query = Category::select(['id', 'name_en', 'name_ar', 'created_at']);
 
             if ($withProducts) {
                 $query->with([
-                    'products' => fn ($q) => $q
+                    'products' => fn($q) => $q
                         ->select(['id', 'name_ar', 'name_en', 'price', 'original_price', 'category_id'])
                         ->with(['images:id,product_id,url,position'])
                         ->latest()
@@ -94,7 +94,7 @@ class CategoryController extends Controller
 
         $category = Category::create($validated);
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -121,7 +121,7 @@ class CategoryController extends Controller
 
         $category->update($validated);
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -150,7 +150,7 @@ class CategoryController extends Controller
 
         $category->delete();
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
