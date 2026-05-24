@@ -12,37 +12,41 @@ class ProductResource extends JsonResource
         $isList = $request->routeIs('products.index');
 
         return [
-            'id' => $this->id,
+            'id'            => $this->id,
 
-            'name' => $this->name_ar,
-            'nameEn' => $this->name_en,
+            'name'          => $this->name_ar,
+            'nameEn'        => $this->name_en,
 
-            'price' => (float) $this->price,
+            'price'         => (float) $this->price,
             'originalPrice' => $this->original_price ? (float) $this->original_price : null,
 
-            // ⚡ IMPORTANT: only send ONE image in list view
-            'image' => $isList
+            // ⚡ Descriptions — omitted on list view to keep payload small
+            'description'   => $this->when(! $isList, $this->description_ar),
+            'descriptionEn' => $this->when(! $isList, $this->description_en),
+
+            // ⚡ Only one image on list, full array on detail
+            'image'  => $isList
                 ? optional($this->images->first())->url
                 : null,
 
-            // ⚡ ONLY send full images in detail page
-            'images' => !$isList
-                ? $this->images->map(fn($img) => $img->url)
-                : null,
+            'images' => $this->when(
+                ! $isList,
+                fn() => $this->images->map(fn($img) => $img->url)
+            ),
 
             'category' => $this->whenLoaded('category', function () {
                 return [
-                    'id' => $this->category->id,
-                    'name' => $this->category->name_en,
+                    'id'    => $this->category->id,
+                    'name'  => $this->category->name_en,
                     'nameAr' => $this->category->name_ar,
                 ];
             }),
 
-            'isNew' => $this->is_new_arrival,
+            'isNew'       => $this->is_new_arrival,
             'isBestSeller' => $this->is_best_seller,
-            'isTrending' => $this->is_trending,
+            'isTrending'  => $this->is_trending,
 
-            'createdAt' => $this->created_at?->toDateTimeString(),
+            'createdAt'   => $this->created_at?->toDateTimeString(),
         ];
     }
 }

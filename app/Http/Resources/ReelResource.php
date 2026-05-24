@@ -18,7 +18,7 @@ class ReelResource extends JsonResource
             'product' => $this->whenLoaded('product', function () {
                 return [
                     'id' => $this->product->id,
-                    'name' => $this->product->name_en,
+                    'name' => $this->product->name_ar,
                     'image' => optional($this->product->images->first())->url,
                 ];
             }),

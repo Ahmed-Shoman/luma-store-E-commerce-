@@ -8,6 +8,7 @@ use App\Http\Resources\ProductResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -28,6 +29,8 @@ class ProductController extends Controller
                     'id',
                     'name_ar',
                     'name_en',
+                    'description_ar',
+                    'description_en',
                     'price',
                     'original_price',
                     'category_id',
@@ -152,32 +155,79 @@ class ProductController extends Controller
     /**
      * PUT/PATCH /api/products/{id}
      */
+    /**
+     * POST /api/products/{id}  (with _method=PATCH for multipart)
+     * PATCH /api/products/{id}
+     */
     public function update(Request $request, int $id): JsonResponse
     {
         $product = Product::find($id);
 
         if (!$product) {
-            return response()->json(['success' => false], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found.',
+            ], 404);
         }
 
         $validated = $request->validate([
-            'name_ar' => 'sometimes|string|max:255',
-            'name_en' => 'sometimes|string|max:255',
-            'price' => 'sometimes|numeric|min:0',
+            'name_ar'        => 'sometimes|string|max:255',
+            'name_en'        => 'sometimes|string|max:255',
+            'description_ar' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'price'          => 'sometimes|numeric|min:0',
             'original_price' => 'nullable|numeric|min:0|gt:price',
-            'category_id' => 'sometimes|exists:categories,id',
+            'category_id'    => 'sometimes|exists:categories,id',
             'is_best_seller' => 'boolean',
             'is_new_arrival' => 'boolean',
-            'is_trending' => 'boolean',
+            'is_trending'    => 'boolean',
+
+            'images'       => 'nullable|array',
+            'images.*'     => 'image|mimes:jpeg,jpg,png,webp',
+
+            // URLs of existing images to keep — anything not listed is deleted
+            'keep_images'  => 'nullable|array',
+            'keep_images.*' => 'nullable|string',
         ]);
 
-        $product->update($validated);
+        // ── Update scalar fields ──────────────────────────────────────────────────
+        $product->update(
+            collect($validated)->except(['images', 'keep_images'])->toArray()
+        );
+
+        // ── Handle images only when client explicitly touches them ────────────────
+        $hasNewImages = $request->hasFile('images');
+        $hasKeepList  = $request->has('keep_images');
+
+        if ($hasNewImages || $hasKeepList) {
+
+            // Delete existing images not present in keep_images list
+            if ($hasKeepList) {
+                $keepUrls = collect($request->input('keep_images', []))->filter()->values();
+
+                foreach ($product->images()->whereNotIn('url', $keepUrls)->get() as $img) {
+                    $path = str_replace(asset('storage') . '/', '', $img->url);
+                    Storage::disk('public')->delete($path);
+                    $img->delete();
+                }
+            }
+
+            // Store and attach new images — same pattern as store()
+            foreach ($request->file('images', []) as $file) {
+                $path = $file->store('products', 'public');
+
+                $product->images()->create([
+                    'url' => asset('storage/' . $path),
+                ]);
+            }
+        }
 
         Cache::tags(['products'])->flush();
 
         return response()->json([
             'success' => true,
-            'data' => new ProductResource($product->fresh()),
+            'message' => 'Product updated successfully.',
+            'data'    => new ProductResource($product->fresh()->load('images')),
         ]);
     }
 

@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('url');
             $table->unsignedInteger('position')->default(0);
             $table->timestamps();
-
             $table->index('product_id');
         });
     }
