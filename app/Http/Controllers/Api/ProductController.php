@@ -41,7 +41,9 @@ class ProductController extends Controller
                 ])
                 ->with([
                     'category:id,name_en,name_ar',
-                    'images:id,product_id,url,position'
+                    'images' => fn($q) => $q->select('id', 'product_id', 'url')
+                        ->orderBy('id')
+                        ->limit(1)
                 ]);
 
             if ($request->category) {
