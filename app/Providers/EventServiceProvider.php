@@ -9,8 +9,13 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         \App\Events\OrderCreated::class => [
             \App\Listeners\SendOrderCreatedEmail::class,
-        ],
+        ]
     ];
+
+    public function shouldDiscoverEvents(): bool
+    {
+        return false;
+    }
 
     public function boot(): void
     {

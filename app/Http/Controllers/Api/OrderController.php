@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use App\Events\OrderCreated;
 
 class OrderController extends Controller
 {
@@ -56,6 +57,55 @@ class OrderController extends Controller
         $order = Order::with('items')->findOrFail($id);
 
         return new OrderResource($order);
+    }
+
+    /**
+     * POST /api/orders
+     */
+    public function store(Request $request)
+    {
+        logger()->info('STEP 1: STORE METHOD HIT', [
+            'time' => microtime(true),
+        ]);
+        $validated = $request->validate([
+            'customer.name'        => 'required|string|max:255',
+            'customer.phone'       => 'required|string|max:20',
+            'customer.address'     => 'required|string|max:500',
+            'items'                => 'required|array|min:1',
+            'items.*.productId'  => 'required|exists:products,id',
+            'items.*.quantity'     => 'required|integer|min:1',
+            'items.*.price'        => 'required|numeric|min:0',
+            'total'                => 'required|numeric|min:0',
+        ]);
+
+        $order = Order::create([
+            'customer_name'    => $validated['customer']['name'],
+            'customer_phone'   => $validated['customer']['phone'],
+            'customer_address' => $validated['customer']['address'],
+            'total'            => $validated['total'],
+            'status'           => 'pending',
+        ]);
+
+        foreach ($request->input('items') as $item) {
+            $order->items()->create([
+                'product_id'      => $item['productId'],
+                'product_name'    => $item['name'],
+                'product_name_en' => $item['nameEn']  ?? null,
+                'quantity'        => $item['quantity'],
+                'price'           => $item['price'],
+                'total'           => $item['price'] * $item['quantity'],
+                'size'            => $item['size']    ?? null,
+            ]);
+        }
+
+        // ✅ Dispatch event
+        event(new OrderCreated($order));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order placed successfully.',
+            'data'    => new OrderResource($order->load('items')),
+        ], 201);
     }
 
     /**

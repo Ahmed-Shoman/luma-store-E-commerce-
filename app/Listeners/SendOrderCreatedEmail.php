@@ -8,9 +8,11 @@ use Illuminate\Support\Facades\Mail;
 
 class SendOrderCreatedEmail
 {
-    public function handle(OrderCreated $event)
+    public function handle(OrderCreated $event): void
     {
-        Mail::to($event->order->customer_phone . '@example.com')
+        logger()->info('Order email fired: ' . $event->order->id);
+
+        Mail::to(env('ORDER_RECEIVER_EMAIL'))
             ->send(new OrderCreatedMail($event->order));
     }
 }
