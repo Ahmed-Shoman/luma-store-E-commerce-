@@ -7,38 +7,32 @@ use App\Http\Resources\ReelResource;
 use App\Models\Reel;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class ReelController extends Controller
 {
-    private const TTL       = 3600;       // 1 hour — reels change infrequently
-    private const CACHE_TAG = 'reels';
 
     /**
      * GET /api/reels
      */
     public function index(Request $request): JsonResponse
     {
-        $perPage  = min((int) $request->input('per_page', 12), 24);
-        $cacheKey = 'reels_' . md5(json_encode($request->only(['page', 'per_page', 'product_id'])));
+        $perPage = min((int) $request->input('per_page', 12), 24);
 
-        $reels = Cache::remember($cacheKey, self::TTL, function () use ($request, $perPage) {
-            $query = Reel::query()
-                ->select(['id', 'video', 'product_id', 'created_at'])
-                ->with([
-                    'product:id,name_en,name_ar',
-                    'product.images:id,product_id,url,position',
-                ])
-                ->latest();
+        $query = Reel::query()
+            ->select(['id', 'video', 'product_id', 'created_at'])
+            ->with([
+                'product:id,name_en,name_ar',
+                'product.images:id,product_id,url,position',
+            ])
+            ->latest();
 
-            // Optional filter by product
-            if ($request->filled('product_id')) {
-                $query->where('product_id', $request->integer('product_id'));
-            }
+        // Optional filter by product
+        if ($request->filled('product_id')) {
+            $query->where('product_id', $request->integer('product_id'));
+        }
 
-            return $query->paginate($perPage);
-        });
+        $reels = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -51,16 +45,10 @@ class ReelController extends Controller
      */
     public function show(Reel $reel): JsonResponse
     {
-        $cacheKey = "reel_{$reel->id}";
-
-        $reelId = $reel->id;
-
-        $reel = Cache::remember($cacheKey, self::TTL, function () use ($reelId) {
-            return Reel::with([
-                'product:id,name_en,name_ar',
-                'product.images:id,product_id,url,position',
-            ])->findOrFail($reelId);
-        });
+        $reel->load([
+            'product:id,name_en,name_ar',
+            'product.images:id,product_id,url,position',
+        ]);
 
         return response()->json([
             'success' => true,
@@ -85,7 +73,6 @@ class ReelController extends Controller
             'product_id' => $validated['product_id'],
         ]);
 
-        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -116,7 +103,6 @@ class ReelController extends Controller
 
         $reel->update(array_filter($validated, fn($v) => ! is_null($v)));
 
-        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -136,7 +122,6 @@ class ReelController extends Controller
 
         $reel->delete();
 
-        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
