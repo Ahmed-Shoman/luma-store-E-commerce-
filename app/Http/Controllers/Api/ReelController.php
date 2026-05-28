@@ -85,7 +85,7 @@ class ReelController extends Controller
             'product_id' => $validated['product_id'],
         ]);
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -116,7 +116,7 @@ class ReelController extends Controller
 
         $reel->update(array_filter($validated, fn($v) => ! is_null($v)));
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
@@ -136,7 +136,7 @@ class ReelController extends Controller
 
         $reel->delete();
 
-        Cache::tags([self::CACHE_TAG])->flush();
+        // Cache::tags([self::CACHE_TAG])->flush();
 
         return response()->json([
             'success' => true,
