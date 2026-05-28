@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReelController;
 use App\Http\Controllers\Api\CategoryController;
-
+use App\Http\Controllers\Api\OrderController;
 
 
 // ── Categories ────────────────────────────────────────────────
@@ -33,4 +33,13 @@ Route::prefix('reels')->name('reels.')->group(function () {
     Route::post('/{reel}',   [ReelController::class, 'update'])->name('update');
     Route::patch('/{reel}',  [ReelController::class, 'update'])->name('update-patch');
     Route::delete('/{reel}', [ReelController::class, 'destroy'])->name('destroy');
+});
+
+
+// ── Orders ─────────────────────────────────────────────────────
+Route::prefix('orders')->group(function () {
+    Route::get('/', [OrderController::class, 'index']);
+    Route::get('/{id}', [OrderController::class, 'show']);
+    Route::patch('/{id}/status', [OrderController::class, 'updateStatus']);
+    Route::delete('/{id}', [OrderController::class, 'destroy']);
 });
