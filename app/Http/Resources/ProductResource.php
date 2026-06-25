@@ -42,6 +42,9 @@ class ProductResource extends JsonResource
                 ];
             }),
 
+            // ⚡ Reel Video
+            'reelVideo' => $this->when(! $isList, $this->reel_url),
+
             'isNew'       => $this->is_new_arrival,
             'isBestSeller' => $this->is_best_seller,
             'isTrending'  => $this->is_trending,

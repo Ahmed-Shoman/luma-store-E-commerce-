@@ -23,6 +23,7 @@ class Product extends Model
         'is_best_seller',
         'is_new_arrival',
         'is_trending',
+        'reel_video',
     ];
 
     protected $casts = [
@@ -49,10 +50,7 @@ class Product extends Model
         return $this->hasMany(ProductImage::class)->orderBy('position');
     }
 
-    public function reels()
-    {
-        return $this->hasMany(Reel::class);
-    }
+
 
     /*
     |-----------------------------------
@@ -104,6 +102,11 @@ class Product extends Model
     public function getIsOnSaleAttribute(): bool
     {
         return $this->original_price && $this->original_price > $this->price;
+    }
+
+    public function getReelUrlAttribute(): ?string
+    {
+        return $this->reel_video ? asset('storage/' . $this->reel_video) : null;
     }
 
     /*

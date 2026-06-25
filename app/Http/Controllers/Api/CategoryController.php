@@ -12,55 +12,54 @@ use App\Http\Resources\CategoryResource;
 
 class CategoryController extends Controller
 {
-    // Cache TTL in seconds (60 min — categories rarely change)
+    // Cache TTL in seconds (60 min)
     private const TTL = 3600;
-    private const CACHE_TAG = 'categories';
 
     /**
      * GET /api/categories
-     * Returns all categories (optionally with product counts).
-     * Cached aggressively — busted only on write.
+     * Returns all categories.
      */
     public function index(Request $request): JsonResponse
     {
-        $withCount = $request->boolean('with_count', false);
-        $cacheKey  = 'categories_all_' . ($withCount ? 'count' : 'plain');
-
-        $categories = Cache::remember($cacheKey, self::TTL, function () use ($withCount) {
-            $query = Category::query()
-                ->select(['id', 'name_en', 'name_ar', 'created_at'])
-                ->orderBy('name_en');
-
-            if ($withCount) {
-                $query->withCount('products');
-            }
-
-            return $query->get();
-        });
+        $categories = Category::all();
 
         return response()->json([
             'success' => true,
-            'data'    => CategoryResource::collection($categories),
+            'data' => $categories,
         ]);
     }
 
     /**
      * GET /api/categories/{id}
-     * Single category — optionally includes its products (paginated).
+     * Single category — optionally includes its products.
      */
     public function show(Request $request, int $id): JsonResponse
     {
         $withProducts = $request->boolean('with_products', false);
-        $cacheKey     = "category_{$id}_" . ($withProducts ? 'products' : 'plain');
+        $cacheKey = "category_{$id}_" . ($withProducts ? 'products' : 'plain');
 
         $category = Cache::remember($cacheKey, self::TTL, function () use ($id, $withProducts) {
-            $query = Category::select(['id', 'name_en', 'name_ar', 'created_at']);
+            $query = Category::select([
+                'id',
+                'name_en',
+                'name_ar',
+                'created_at',
+            ]);
 
             if ($withProducts) {
                 $query->with([
                     'products' => fn($q) => $q
-                        ->select(['id', 'name_ar', 'name_en', 'price', 'original_price', 'category_id'])
-                        ->with(['images:id,product_id,url,position'])
+                        ->select([
+                            'id',
+                            'name_ar',
+                            'name_en',
+                            'price',
+                            'original_price',
+                            'category_id',
+                        ])
+                        ->with([
+                            'images:id,product_id,url,position',
+                        ])
                         ->latest()
                         ->limit(20),
                 ]);
@@ -78,7 +77,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => new CategoryResource($category),
+            'data' => new CategoryResource($category),
         ]);
     }
 
@@ -88,8 +87,18 @@ class CategoryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name_en' => ['required', 'string', 'max:255', Rule::unique('categories', 'name_en')],
-            'name_ar' => ['required', 'string', 'max:255', Rule::unique('categories', 'name_ar')],
+            'name_en' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('categories', 'name_en'),
+            ],
+            'name_ar' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('categories', 'name_ar'),
+            ],
         ]);
 
         $category = Category::create($validated);
@@ -99,7 +108,7 @@ class CategoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Category created successfully.',
-            'data'    => new CategoryResource($category),
+            'data' => new CategoryResource($category),
         ], 201);
     }
 
@@ -111,12 +120,25 @@ class CategoryController extends Controller
         $category = Category::find($id);
 
         if (! $category) {
-            return response()->json(['success' => false, 'message' => 'Category not found.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Category not found.',
+            ], 404);
         }
 
         $validated = $request->validate([
-            'name_en' => ['sometimes', 'string', 'max:255', Rule::unique('categories', 'name_en')->ignore($id)],
-            'name_ar' => ['sometimes', 'string', 'max:255', Rule::unique('categories', 'name_ar')->ignore($id)],
+            'name_en' => [
+                'sometimes',
+                'string',
+                'max:255',
+                Rule::unique('categories', 'name_en')->ignore($id),
+            ],
+            'name_ar' => [
+                'sometimes',
+                'string',
+                'max:255',
+                Rule::unique('categories', 'name_ar')->ignore($id),
+            ],
         ]);
 
         $category->update($validated);
@@ -125,20 +147,23 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => new CategoryResource($category->fresh()),
+            'data' => new CategoryResource($category->fresh()),
         ]);
     }
 
     /**
      * DELETE /api/categories/{id}
-     * Blocks deletion if products are still assigned (prevents orphaned products).
+     * Blocks deletion if products are still assigned.
      */
     public function destroy(int $id): JsonResponse
     {
         $category = Category::withCount('products')->find($id);
 
         if (! $category) {
-            return response()->json(['success' => false, 'message' => 'Category not found.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Category not found.',
+            ], 404);
         }
 
         if ($category->products_count > 0) {

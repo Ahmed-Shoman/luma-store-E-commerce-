@@ -26,14 +26,15 @@ return new class extends Migration {
                 ->on('categories')
                 ->cascadeOnDelete();
 
-
             $table->boolean('is_best_seller')->default(false);
             $table->boolean('is_new_arrival')->default(true);
             $table->boolean('is_trending')->default(false);
 
+            // Reel Video
+            $table->string('reel_video')->nullable();
+
             $table->timestamps();
 
-            // optional but very useful:
             $table->index('category_id');
             $table->index('is_trending');
             $table->index('is_new_arrival');
