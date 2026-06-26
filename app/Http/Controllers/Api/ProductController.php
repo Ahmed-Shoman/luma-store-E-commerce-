@@ -43,10 +43,10 @@ class ProductController extends Controller
             ])
             ->with([
                 'category:id,name_en,name_ar',
-                'images:id,product_id,url'
+                'images:id,product_id,url',
             ]);
 
-        if ($request->category) {
+        if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
@@ -62,7 +62,7 @@ class ProductController extends Controller
             $query->where('is_trending', true);
         }
 
-        if ($request->search) {
+        if ($request->filled('search')) {
             $search = $request->search;
 
             $query->where(function ($q) use ($search) {
@@ -74,18 +74,14 @@ class ProductController extends Controller
         $sortBy = in_array(
             $request->sort_by,
             ['price', 'created_at', 'name_en', 'name_ar']
-        )
-            ? $request->sort_by
-            : 'created_at';
+        ) ? $request->sort_by : 'created_at';
 
         $query->orderBy(
             $sortBy,
             $request->sort_order === 'asc' ? 'asc' : 'desc'
         );
 
-        $perPage = min((int) $request->per_page ?: 12, 20);
-
-        $products = $query->paginate($perPage);
+        $products = $query->get();
 
         return response()->json([
             'success' => true,
