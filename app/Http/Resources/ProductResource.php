@@ -48,6 +48,8 @@ class ProductResource extends JsonResource
             'isNew'       => $this->is_new_arrival,
             'isBestSeller' => $this->is_best_seller,
             'isTrending'  => $this->is_trending,
+            
+            'sizes'       => $this->sizes ?? [],
 
             'createdAt'   => $this->created_at?->toDateTimeString(),
         ];

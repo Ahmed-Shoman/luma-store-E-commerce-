@@ -24,6 +24,7 @@ class Product extends Model
         'is_new_arrival',
         'is_trending',
         'reel_video',
+        'sizes',
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class Product extends Model
         'is_best_seller' => 'boolean',
         'is_new_arrival' => 'boolean',
         'is_trending' => 'boolean',
+        'sizes' => 'array',
     ];
 
     /*

@@ -24,6 +24,20 @@ Route::prefix('products')->group(function () {
     Route::delete('/{id}', [ProductController::class, 'destroy']);
 });
 
+use App\Http\Controllers\Api\DashboardController;
+
+// ── Dashboard ─────────────────────────────────────────────────
+Route::prefix('dashboard')->group(function () {
+    Route::get('/overview', [DashboardController::class, 'overview']);
+    Route::get('/revenue', [DashboardController::class, 'revenue']);
+    Route::get('/order-status', [DashboardController::class, 'orderStatus']);
+    Route::get('/top-products', [DashboardController::class, 'topProducts']);
+    Route::get('/categories', [DashboardController::class, 'categories']);
+    Route::get('/latest-orders', [DashboardController::class, 'latestOrders']);
+    Route::get('/top-customers', [DashboardController::class, 'topCustomers']);
+    Route::get('/activity', [DashboardController::class, 'activity']);
+});
+
 // Admin Products
 Route::get('admin/products', [ProductController::class, 'adminIndex']);
 

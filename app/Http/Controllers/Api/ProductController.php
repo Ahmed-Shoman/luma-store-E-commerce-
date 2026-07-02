@@ -39,6 +39,7 @@ class ProductController extends Controller
                 'is_new_arrival',
                 'is_trending',
                 'reel_video',
+                'sizes',
                 'created_at',
             ])
             ->with([
@@ -150,6 +151,9 @@ class ProductController extends Controller
             'is_new_arrival' => 'boolean',
             'is_trending' => 'boolean',
 
+            'sizes' => 'nullable|array',
+            'sizes.*' => 'string|max:50',
+
             'reel_video' => 'nullable|file|mimes:mp4,mov,ogg,qt|max:50000',
         ]);
 
@@ -224,6 +228,9 @@ class ProductController extends Controller
             'is_best_seller' => 'boolean',
             'is_new_arrival' => 'boolean',
             'is_trending'    => 'boolean',
+
+            'sizes' => 'nullable|array',
+            'sizes.*' => 'string|max:50',
 
             'reel_video' => 'nullable|file|mimes:mp4,mov,ogg,qt|max:50000',
 
