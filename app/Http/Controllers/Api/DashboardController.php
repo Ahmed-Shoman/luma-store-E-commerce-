@@ -18,45 +18,45 @@ class DashboardController extends Controller
     {
         return Cache::remember('dashboard.overview', 60, function () {
             $totalRevenue = Order::where('status', '!=', 'cancelled')->sum('total');
-            
+
             $prevMonthStart = Carbon::now()->subMonth()->startOfMonth();
             $prevMonthEnd = Carbon::now()->subMonth()->endOfMonth();
             $currentMonthStart = Carbon::now()->startOfMonth();
-            
+
             $prevMonthRevenue = Order::where('status', '!=', 'cancelled')
                 ->whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])
                 ->sum('total');
-                
+
             $currentMonthRevenue = Order::where('status', '!=', 'cancelled')
                 ->where('created_at', '>=', $currentMonthStart)
                 ->sum('total');
 
-            $revenueGrowth = $prevMonthRevenue > 0 
-                ? (($currentMonthRevenue - $prevMonthRevenue) / $prevMonthRevenue) * 100 
+            $revenueGrowth = $prevMonthRevenue > 0
+                ? (($currentMonthRevenue - $prevMonthRevenue) / $prevMonthRevenue) * 100
                 : ($currentMonthRevenue > 0 ? 100 : 0);
 
             $totalOrders = Order::count();
             $prevMonthOrders = Order::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])->count();
             $currentMonthOrders = Order::where('created_at', '>=', $currentMonthStart)->count();
-            
-            $ordersGrowth = $prevMonthOrders > 0 
-                ? (($currentMonthOrders - $prevMonthOrders) / $prevMonthOrders) * 100 
+
+            $ordersGrowth = $prevMonthOrders > 0
+                ? (($currentMonthOrders - $prevMonthOrders) / $prevMonthOrders) * 100
                 : ($currentMonthOrders > 0 ? 100 : 0);
 
             $totalCustomers = DB::table('orders')->distinct('customer_phone')->count('customer_phone');
-            
+
             $prevMonthCustomers = DB::table('orders')
                 ->whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])
                 ->distinct('customer_phone')
                 ->count('customer_phone');
-                
+
             $currentMonthCustomers = DB::table('orders')
                 ->where('created_at', '>=', $currentMonthStart)
                 ->distinct('customer_phone')
                 ->count('customer_phone');
-                
-            $customersGrowth = $prevMonthCustomers > 0 
-                ? (($currentMonthCustomers - $prevMonthCustomers) / $prevMonthCustomers) * 100 
+
+            $customersGrowth = $prevMonthCustomers > 0
+                ? (($currentMonthCustomers - $prevMonthCustomers) / $prevMonthCustomers) * 100
                 : ($currentMonthCustomers > 0 ? 100 : 0);
 
             $totalProducts = Product::count();
@@ -85,14 +85,14 @@ class DashboardController extends Controller
     public function revenue(Request $request)
     {
         $period = $request->query('period', '7days');
-        
+
         $cacheKey = 'dashboard.revenue.' . $period;
-        
+
         return Cache::remember($cacheKey, 60, function () use ($period) {
             $query = Order::where('status', '!=', 'cancelled');
             $format = '%Y-%m-%d';
             $groupBy = 'date';
-            
+
             if ($period === '7days') {
                 $query->where('created_at', '>=', Carbon::now()->subDays(7));
             } elseif ($period === '30days') {
@@ -161,7 +161,7 @@ class DashboardController extends Controller
             $statuses = Order::select('status', DB::raw('count(*) as count'))
                 ->groupBy('status')
                 ->get();
-                
+
             return response()->json($statuses);
         });
     }
@@ -176,7 +176,7 @@ class DashboardController extends Controller
                 ->orderByDesc('units_sold')
                 ->limit(10)
                 ->get();
-                
+
             return response()->json($products);
         });
     }
@@ -194,7 +194,7 @@ class DashboardController extends Controller
                 ->get();
 
             $total = $categories->sum('revenue');
-            
+
             $data = $categories->map(function ($item) use ($total) {
                 return [
                     'name' => $item->name ?: $item->name_ar,
@@ -224,7 +224,7 @@ class DashboardController extends Controller
                         'items_count' => $order->items->count(),
                     ];
                 });
-                
+
             return response()->json($orders);
         });
     }
@@ -238,7 +238,7 @@ class DashboardController extends Controller
                 ->orderByDesc('total_spent')
                 ->limit(5)
                 ->get();
-                
+
             return response()->json($customers);
         });
     }
@@ -252,7 +252,7 @@ class DashboardController extends Controller
                     'id' => 'order_' . $order->id,
                     'type' => 'order',
                     'title' => 'New Order #' . $order->id,
-                    'description' => $order->customer_name . ' placed an order for ' . $order->total . ' SAR',
+                    'description' => $order->customer_name . ' placed an order for ' . $order->total . ' EGP',
                     'date' => $order->created_at,
                 ];
             });
